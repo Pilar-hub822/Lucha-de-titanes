@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="gl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>html{color-scheme:light dark}body{margin:0}[hidden]{display:none!important}</style>
+<title>Laboratorio Virtual Ortegal–Courel</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=JetBrains+Mono:wght@400;500&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout concept: a lab bench in a frame. Compact title strip, four stations (bench, sorting, P-T chart, challenge).
+   Palette: slate paper, copper for heat, steel blue for pressure, specimen colours stay fixed in both themes. */
+:root {
+  --bg: #e8ecef;
+  --surface: #f6f8f9;
+  --bench: #dfe4e8;
+  --ink: #17212a;
+  --muted: #55626d;
+  --line: #c4ccd3;
+  --heat: #b4491f;
+  --heat-soft: #f3dccf;
+  --press: #2a6f97;
+  --press-soft: #d3e5ef;
+  --on: #ffffff;
+  --good: #23743f;
+  --bad: #b3361f;
+  --k-ign: #b4491f;
+  --k-met: #1f7a72;
+  --k-sed: #4d6fa8;
+  --k-min: #9a7a0b;
+  --f-diax: #9fb4c2;
+  --f-xv: #7fb38f;
+  --f-anf: #c9b36a;
+  --f-gra: #d58f5d;
+  --f-ecl: #c86a6a;
+  --f-blu: #7a8fc2;
+  --f-man: #8e7aa6;
+  --font-display: 'Archivo', 'Segoe UI', system-ui, sans-serif;
+  --font-body: 'Public Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12181d; --surface: #1a232a; --bench: #222d35; --ink: #e6edf1; --muted: #9bacb7; --line: #2f3d47;
+    --heat: #ee8a5a; --heat-soft: #3d2a20; --press: #6cb4dc; --press-soft: #1f3442; --on: #101619;
+    --good: #5cc98a; --bad: #f08b78;
+    --k-ign: #ee8a5a; --k-met: #5cc2b8; --k-sed: #8aa6d8; --k-min: #d8b84a;
+    --f-diax: #3e5565; --f-xv: #2f5a3d; --f-anf: #675c2e; --f-gra: #7a4627; --f-ecl: #773838; --f-blu: #3b4a78; --f-man: #4d3f63;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12181d; --surface: #1a232a; --bench: #222d35; --ink: #e6edf1; --muted: #9bacb7; --line: #2f3d47;
+  --heat: #ee8a5a; --heat-soft: #3d2a20; --press: #6cb4dc; --press-soft: #1f3442; --on: #101619;
+  --good: #5cc98a; --bad: #f08b78;
+  --k-ign: #ee8a5a; --k-met: #5cc2b8; --k-sed: #8aa6d8; --k-min: #d8b84a;
+  --f-diax: #3e5565; --f-xv: #2f5a3d; --f-anf: #675c2e; --f-gra: #7a4627; --f-ecl: #773838; --f-blu: #3b4a78; --f-man: #4d3f63;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.5 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 0 40px;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 1020px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; line-height: 1.15; text-wrap: balance; }
+p { margin: 0; }
+button, select { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--press); outline-offset: 2px; border-radius: 4px; }
+
+.top { padding-block: 16px 4px; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: baseline; justify-content: space-between; }
+.top h1 { font-size: clamp(1.25rem, 3.2vw, 1.7rem); font-weight: 800; letter-spacing: -.01em; }
+.top p { font: 500 12px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+
+.tabbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 9; background: var(--bg); border-bottom: 1px solid var(--line); }
+.tabs { display: flex; gap: 4px; overflow-x: auto; padding-block: 8px; scrollbar-width: thin; }
+.tab { flex: none; border: 0; background: transparent; color: var(--muted); font-weight: 600; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+.tab:hover { color: var(--ink); background: var(--bench); }
+.tab[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+
+.panel { padding-top: 18px; display: grid; gap: 16px; }
+.panel[hidden] { display: none; }
+.lead { color: var(--muted); max-width: 72ch; }
+
+.btn, .chip { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 7px 12px; font-weight: 600; font-size: .9rem; cursor: pointer; }
+.chip { border-radius: 999px; }
+.btn:hover:not(:disabled), .chip:hover { border-color: var(--press); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn.go { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+.btn.on, .chip[aria-pressed="true"], .chip.on { background: var(--press); border-color: var(--press); color: var(--on); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.gl { font: 500 11px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.switch { display: inline-flex; gap: 8px; align-items: center; font-weight: 600; cursor: pointer; }
+.switch input { width: 17px; height: 17px; accent-color: var(--press); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; min-width: 0; }
+
+/* bench */
+.bench { display: grid; gap: 14px; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); align-items: start; }
+@media (max-width: 800px) { .bench { grid-template-columns: minmax(0, 1fr); } }
+.shelf { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); }
+.tile { position: relative; padding: 0; border: 2px solid var(--line); background: var(--bench); border-radius: 10px; cursor: pointer; overflow: hidden; display: grid; text-align: left; }
+.tile svg { display: block; width: 100%; height: auto; }
+.tile .num { position: absolute; left: 6px; top: 5px; font: 600 11px var(--font-mono); background: var(--surface); color: var(--ink); border-radius: 4px; padding: 1px 5px; }
+.tile .nm { font: 600 11px/1.2 var(--font-body); padding: 4px 6px; background: var(--surface); min-height: 24px; }
+.tile.cur { border-color: var(--press); box-shadow: 0 0 0 2px var(--press); }
+.tile.done { border-color: var(--good); }
+.stage { background: var(--bench); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 10px; }
+.stage svg { width: 100%; height: auto; display: block; border-radius: 12px; }
+.scale { display: flex; justify-content: space-between; font: 500 11px var(--font-mono); color: var(--muted); gap: 8px; flex-wrap: wrap; }
+.tests { display: grid; gap: 8px; }
+.testrow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.log { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: .92rem; }
+.log li { background: var(--bench); border-radius: 8px; padding: 7px 10px; }
+.log b { font: 500 11px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--press); display: block; }
+.empty { color: var(--muted); font-size: .92rem; }
+.idform { display: grid; gap: 10px; }
+.idform select { width: 100%; padding: 9px 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); }
+.msg { padding: 9px 12px; border-radius: 8px; font-weight: 600; background: var(--bench); }
+.msg.ok { color: var(--good); } .msg.no { color: var(--bad); }
+.prog { font: 500 12px var(--font-mono); color: var(--muted); }
+.ficha { display: grid; gap: 8px; }
+.ficha h3 { font-size: 1.4rem; font-weight: 800; }
+.tags { display: flex; flex-wrap: wrap; gap: 10px; }
+.tag { font: 500 11px/1 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.tag i { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); display: inline-block; }
+.k-ign i { background: var(--k-ign); } .k-met i { background: var(--k-met); } .k-sed i { background: var(--k-sed); } .k-min i { background: var(--k-min); }
+.pt { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.pt div { border-radius: 8px; padding: 8px 10px; }
+.pt .t { background: var(--heat-soft); } .pt .p { background: var(--press-soft); } .pt .d { background: var(--bench); }
+.pt dt { font: 500 10.5px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.pt dd { margin: 2px 0 0; font: 700 1.02rem var(--font-display); font-variant-numeric: tabular-nums; }
+.pt { margin: 0; }
+.ficha .note { color: var(--muted); font-size: .94rem; }
+details.key { font-size: .92rem; }
+details.key summary { cursor: pointer; font-weight: 700; }
+details.key ol { margin: 8px 0 0; padding-left: 1.2em; display: grid; gap: 4px; color: var(--muted); }
+
+/* sorting */
+.sort { display: grid; gap: 14px; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); align-items: start; }
+@media (max-width: 700px) { .sort { grid-template-columns: minmax(0, 1fr); } }
+.sort .spec { border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+.sort .spec svg { display: block; width: 100%; height: auto; }
+.bins { display: grid; gap: 8px; }
+.bins .btn { text-align: left; padding: 10px 12px; }
+.bins .btn small { display: block; font-weight: 400; color: var(--muted); font-size: .82rem; }
+.bins .btn.right { border-color: var(--good); background: var(--press-soft); }
+.bins .btn.wrong { border-color: var(--bad); }
+.score { font: 800 2.2rem var(--font-display); color: var(--heat); }
+
+/* P-T */
+.ptwrap { display: grid; gap: 14px; grid-template-columns: minmax(0, 1.9fr) minmax(0, 1fr); align-items: start; }
+@media (max-width: 860px) { .ptwrap { grid-template-columns: minmax(0, 1fr); } }
+.chart { overflow-x: auto; }
+.chart svg { display: block; width: 100%; min-width: 520px; height: auto; touch-action: manipulation; }
+.ax { stroke: var(--muted); stroke-width: 1.2; fill: none; }
+.gridl { stroke: var(--line); stroke-width: 1; }
+.tick { font: 500 14px var(--font-mono); fill: var(--muted); }
+.axt { font: 600 15px var(--font-body); fill: var(--ink); }
+.fac { stroke: var(--bg); stroke-width: 1.5; fill-opacity: .8; }
+.faclbl { font: 700 14px var(--font-display); fill: var(--ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; opacity: .92; }
+.geo { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-dasharray: 6 5; opacity: .75; }
+.geolbl { font: 700 13px var(--font-mono); fill: var(--ink); paint-order: stroke; stroke: var(--surface); stroke-width: 3px; }
+.mk { stroke: var(--surface); stroke-width: 2; cursor: pointer; }
+.mk.sel { stroke: var(--ink); stroke-width: 3; }
+.rng { fill: var(--heat); fill-opacity: .18; stroke: var(--heat); stroke-width: 2.5; }
+.rnglbl { font: 700 15px var(--font-display); fill: var(--ink); paint-order: stroke; stroke: var(--surface); stroke-width: 4px; stroke-linejoin: round; }
+.probe { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 3; }
+.probepin { fill: var(--ink); stroke: var(--surface); stroke-width: 2; }
+.guess { fill: var(--press); stroke: var(--surface); stroke-width: 2; }
+.legend { font-size: .85rem; color: var(--muted); padding: 6px 4px 0; min-width: 0; }
+.side { display: grid; gap: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips .chip { padding: 5px 10px; font-size: .84rem; }
+.chips .chip i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+.rd { display: grid; gap: 6px; margin: 0; }
+.rd div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+.rd dt { color: var(--muted); } .rd dd { margin: 0; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: .9rem; min-width: 560px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+th { font: 500 11px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+td { font-variant-numeric: tabular-nums; }
+
+/* quiz */
+.quiz { max-width: 720px; display: grid; gap: 12px; }
+.quiz .q { font: 700 1.2rem/1.25 var(--font-display); }
+.opts { display: grid; gap: 8px; }
+.opt { text-align: left; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 10px 14px; font-weight: 600; cursor: pointer; }
+.opt:hover:not(:disabled) { border-color: var(--press); }
+.opt.right { border-color: var(--good); background: var(--press-soft); }
+.opt.wrong { border-color: var(--bad); }
+.explain { color: var(--muted); font-size: .94rem; }
+.foot { color: var(--muted); font-size: .84rem; display: grid; gap: 4px; padding-top: 6px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Laboratorio virtual de rochas e minerais</h1>
+    <p>Xeoparques Cabo Ortegal e Montañas do Courel · 1º BAC</p>
+  </header>
+
+  <div class="tabbar"><div class="tabs" role="tablist" aria-label="Estacións do laboratorio">
+    <button class="tab" role="tab" id="t-bancada" data-id="bancada" aria-selected="true">Bancada de identificación</button>
+    <button class="tab" role="tab" id="t-clasificar" data-id="clasificar" aria-selected="false">Clasificar</button>
+    <button class="tab" role="tab" id="t-pt" data-id="pt" aria-selected="false">Diagrama Tª–P</button>
+    <button class="tab" role="tab" id="t-reto" data-id="reto" aria-selected="false">Reto</button>
+  </div></div>
+
+  <!-- BANCADA -->
+  <section class="panel" id="p-bancada" role="tabpanel" aria-labelledby="t-bancada">
+    <p class="lead">Hai 17 mostras sen nome. Elixe unha, fai probas como nun laboratorio, apunta o que observas e identifícaa. Cando acertes, a mostra mostra a súa ficha con temperatura e presión de formación.</p>
+    <div class="row">
+      <span class="prog" id="prog"></span>
+      <label class="switch" for="showNames"><input type="checkbox" id="showNames"> Mostrar nomes nas mostras (axuda)</label>
+    </div>
+    <div class="shelf" id="shelf" role="list"></div>
+    <div class="bench">
+      <div class="stage">
+        <div class="row">
+          <span class="gl">Vista</span>
+          <button class="btn on" id="vMan">Mostra de man</button>
+          <button class="btn" id="vLupa">Lupa 10×</button>
+        </div>
+        <div id="specimen"></div>
+        <div class="scale"><span id="scaleTxt"></span><span id="sampleTag"></span></div>
+        <details class="key">
+          <summary>Clave de campo rápida</summary>
+          <ol>
+            <li>Efervesce con HCl? Calcaria (ou rocha con carbonato).</li>
+            <li>Brillo metálico e moi pesado? Mineral metálico: mira a cor da raia e a dureza.</li>
+            <li>Bandas claras e escuras? Rocha metamórfica de grao alto (gneis, granulita).</li>
+            <li>Rompe en láminas planas? Lousa.</li>
+            <li>Verde, densa, con granates vermellos? Eclogita. Verde sen granates e moi dura? Peridotita ou piroxenita.</li>
+            <li>Granos de cuarzo moi duros, sen bandeado? Cuarcita.</li>
+          </ol>
+        </details>
+      </div>
+      <div class="tests card">
+        <h3>Probas</h3>
+        <div class="testrow"><span class="gl">Observación</span>
+          <button class="btn" data-test="lupa">Lupa: textura</button>
+          <button class="btn" data-test="cor">Cor e brillo</button>
+        </div>
+        <div class="testrow"><span class="gl">Dureza (raiar)</span>
+          <button class="btn" data-test="un">Uña 2,5</button>
+          <button class="btn" data-test="mo">Moeda 3,5</button>
+          <button class="btn" data-test="na">Navalla 5,5</button>
+          <button class="btn" data-test="cz">Cuarzo 7</button>
+        </div>
+        <div class="testrow"><span class="gl">Outras</span>
+          <button class="btn" data-test="hcl">Ácido HCl diluído</button>
+          <button class="btn" data-test="dens">Densidade</button>
+        </div>
+        <h3 style="font-size:1rem">Caderno de laboratorio</h3>
+        <ul class="log" id="log" aria-live="polite"></ul>
+        <div id="idbox"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CLASIFICAR -->
+  <section class="panel" id="p-clasificar" role="tabpanel" aria-labelledby="t-clasificar" hidden>
+    <p class="lead">Clasifica cada mostra. Primeiro polo seu tipo e despois polo ambiente onde se formou: así asocias cada rocha á súa temperatura e presión.</p>
+    <div class="row">
+      <span class="gl">Actividade</span>
+      <button class="chip on" id="mTipo">Tipo de rocha ou mineral</button>
+      <button class="chip" id="mEnv">Ambiente de formación (Tª e P)</button>
+    </div>
+    <div id="sortbox"></div>
+  </section>
+
+  <!-- DIAGRAMA TP -->
+  <section class="panel" id="p-pt" role="tabpanel" aria-labelledby="t-pt" hidden>
+    <p class="lead">O diagrama relaciona temperatura (eixo horizontal) e presión (eixo vertical). A presión crece coa profundidade: 1 GPa equivale a uns 33 km. Os rangos son orientativos para clase.</p>
+    <div class="row">
+      <span class="gl">Modo</span>
+      <button class="chip on" id="mExp">Explorar</button>
+      <button class="chip" id="mGuess">Proba: colócaa ti</button>
+      <label class="switch" for="showGeo"><input type="checkbox" id="showGeo" checked> Gradientes xeotérmicos</label>
+    </div>
+    <div class="ptwrap">
+      <div class="card chart">
+        <svg id="ptsvg" viewBox="0 0 760 520" role="img" aria-label="Diagrama presión–temperatura con campos de metamorfismo e rochas dos xeoparques"></svg>
+        <p class="legend" id="geoLeg"><b>A</b> subdución ≈ 6 °C/km (gradiente frío) · <b>B</b> continente estable ≈ 20 °C/km · <b>C</b> oróxeno en colisión ≈ 30 °C/km</p>
+      </div>
+      <div class="side">
+        <div class="card" id="ptside"></div>
+        <div class="card">
+          <div class="gl" style="margin-bottom:6px">Sonda (pasa o rato ou toca o diagrama)</div>
+          <dl class="rd" id="probeRd"></dl>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="chipsCard"><div class="gl" style="margin-bottom:8px">Rochas e minerais</div><div class="chips" id="ptchips"></div></div>
+    <details class="card">
+      <summary style="cursor:pointer;font-weight:700">Táboa resumo: Tª, presión e profundidade</summary>
+      <div class="tbl" style="margin-top:10px"><table id="tbl"></table></div>
+    </details>
+  </section>
+
+  <!-- RETO -->
+  <section class="panel" id="p-reto" role="tabpanel" aria-labelledby="t-reto" hidden>
+    <p class="lead">Dez preguntas sobre identificación e condicións de formación. Cada resposta explícase ao momento.</p>
+    <div class="card quiz" id="quiz" aria-live="polite"></div>
+  </section>
+
+  <footer class="foot">
+    <p>Valores de temperatura e presión orientativos para clase, redondeados a partir de rangos habituais en petroloxía. Os datos reais dependen do estudo de cada mostra. Para Cabo Ortegal, algúns estudos sitúan a asociación granate–clinopiroxeno de eclogitas e granulitas arredor de 700 °C.</p>
+    <p>Fontes: Gil Ibarguchi et al. e Mendia et al. (Cadernos do Laboratorio Xeolóxico de Laxe), Girardeau et al. (1990), proxecto Xeoparque Cabo Ortegal, Pérez Alberti (2021, Nemus) e Xeoparque Montañas do Courel (Geogaceta 70).</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  function esc(t) { var d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+  function fmt(n) { return String(n).replace('.', ','); }
+  function shuffle(a) { var b = a.slice(); for (var i = b.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = b[i]; b[i] = b[j]; b[j] = t; } return b; }
+
+  /* ---------- data ---------- */
+  var KIND = { ign: 'Ígnea', met: 'Metamórfica', sed: 'Sedimentaria', min: 'Mineral' };
+  var PARK = { CO: 'Cabo Ortegal', CR: 'Courel', AM: 'Ambos xeoparques' };
+  var ENVS = {
+    sup: { n: 'Superficie e cunca sedimentaria', d: 'T < 60 °C · P < 0,05 GPa (< 2 km)' },
+    int: { n: 'Intrusión somera de magma', d: 'T 1000–1200 °C · P < 0,1 GPa (< 3 km)' },
+    hid: { n: 'Codia superior: baixo grao e fluídos quentes', d: 'T 200–500 °C · P 0,05–1 GPa (2–33 km)' },
+    med: { n: 'Codia media', d: 'T 500–800 °C · P 0,3–1 GPa (10–33 km)' },
+    inf: { n: 'Codia inferior', d: 'T 700–1000 °C · P 0,5–1,3 GPa (17–43 km)' },
+    alt: { n: 'Alta presión (enterramento profundo)', d: 'T 600–850 °C · P > 1,4 GPa (> 46 km)' },
+    man: { n: 'Manto superior', d: 'T 900–1300 °C · P > 1 GPa (> 33 km)' }
+  };
+  var ROCKS = [
+    { id: 'per', n: 'Peridotita', p: 'CO', k: 'ign', env: ['man'], T: [900, 1300], P: [1.0, 3.0], amb: 'Manto superior',
+      lupa: 'Grans de olivino verde-oliva e piroxeno negro de 1–5 mm, entrelazados. Sen bandeado nin láminas.',
+      cor: 'Verde escura. As superficies alteradas viran pardas porque o ferro se oxida.',
+      hcl: 'Sen reacción.', dur: 6.5, dens: 3.3,
+      nota: 'Anaco do manto superior que aflora na Herbeira e na Capelada. O seu contacto coas granulitas lembra o paso de codia a manto.',
+      v: { bg: '#2c4730', L: [{ t: 'dots', c: '#7d9a3a', r: 6, n: 230, e: .8, o: .9 }, { t: 'dots', c: '#16190f', r: 4, n: 150, o: .95 }, { t: 'dots', c: '#4f6b35', r: 5, n: 120 }, { t: 'rind', c: '#8b5a33' }] } },
+    { id: 'pir', n: 'Piroxenita', p: 'CO', k: 'ign', env: ['man'], T: [900, 1300], P: [1.0, 3.0], amb: 'Manto superior',
+      lupa: 'Cristais grandes de piroxeno que encaixan entre si. Case sen olivino.',
+      cor: 'Verde moi escura a negra, con brillo vítreo-resinoso.',
+      hcl: 'Sen reacción.', dur: 6, dens: 3.3,
+      nota: 'Forma capas dentro das peridotitas. No macizo da Herbeira hai moitas piroxenitas intercaladas: un manto superior composto.',
+      v: { bg: '#25331f', L: [{ t: 'dots', c: '#3d5233', r: 11, n: 90, e: .8 }, { t: 'dots', c: '#10150e', r: 5, n: 140 }, { t: 'dots', c: '#566b45', r: 8, n: 60, o: .8 }] } },
+    { id: 'ser', n: 'Serpentinita', p: 'CO', k: 'met', env: ['hid'], T: [200, 500], P: [0.1, 1.0], amb: 'Hidratación de rochas do manto',
+      lupa: 'Masa de grao moi fino con veas claras e superficies lisas e brillantes de fricción.',
+      cor: 'Verde de aspecto céreo e tacto saponáceo.',
+      hcl: 'Sen reacción.', dur: 3.5, dens: 2.6,
+      nota: 'Nace cando a auga hidrata o olivino das peridotitas, con frecuencia ao longo de fallas. Fórmase a temperatura moderada.',
+      v: { bg: '#4a7552', L: [{ t: 'dots', c: '#6b9573', r: 14, n: 50, o: .35 }, { t: 'veins', c: '#a9c9a2', n: 7, w: 1.6, o: .8 }, { t: 'veins', c: '#2f4f37', n: 5, w: 1 }, { t: 'lines', c: '#cfe4cb', n: 16, len: 30, a: 20, j: 10, w: 1, o: .5 }] } },
+    { id: 'gra', n: 'Granulita', p: 'CO', k: 'met', env: ['inf'], T: [700, 1000], P: [0.5, 1.3], amb: 'Base da codia continental',
+      lupa: 'Bandas claras e escuras alternadas, de grao medio, con granates vermellos redondeados.',
+      cor: 'Bandas claras (feldespatos e cuarzo) e escuras (piroxenos). Granates vermellos.',
+      hcl: 'Sen reacción.', dur: 6.5, dens: 3.0,
+      nota: 'Rocha metamórfica de alta temperatura da base da codia. Forma boa parte da serra da Capelada.',
+      v: { bg: '#d6d0c4', L: [{ t: 'bands', cols: ['#d9d3c7', '#3a3a3d', '#c9c1b3', '#2b2b2e', '#e2dcd0'], n: 9, amp: 6 }, { t: 'dots', c: '#8a8a8a', r: 2, n: 120, o: .35 }, { t: 'dots', c: '#a5262e', r: 5, n: 12, s: '#5e1015' }] } },
+    { id: 'ecl', n: 'Eclogita', p: 'CO', k: 'met', env: ['alt'], T: [600, 850], P: [1.4, 2.2], amb: 'Enterramento profundo en subdución ou colisión',
+      lupa: 'Grao medio. Masa verde (piroxeno onfacita) chea de granates vermellos. Sen bandeado claro.',
+      cor: 'Verde brillante con granates vermellos. Moi pesada para o seu tamaño.',
+      hcl: 'Sen reacción.', dur: 7, dens: 3.4,
+      nota: 'Basalto de fondo oceánico enterrado a gran profundidade. Cabo Ortegal é un dos mellores sitios do Macizo Ibérico para velas.',
+      v: { bg: '#5d8b57', L: [{ t: 'dots', c: '#79a96c', r: 9, n: 90, o: .7 }, { t: 'dots', c: '#2f5a35', r: 6, n: 80, o: .7 }, { t: 'dots', c: '#f1ece0', r: 1.5, n: 40 }, { t: 'dots', c: '#b0242c', r: 6, n: 55, s: '#5c1217' }] } },
+    { id: 'anf', n: 'Anfibolita', p: 'CO', k: 'met', env: ['med'], T: [500, 700], P: [0.3, 1.0], amb: 'Codia media',
+      lupa: 'Cristais negros alongados de anfíbol, orientados, con plaxioclasa branca entre eles.',
+      cor: 'Negra a verde moi escura, brillo apagado.',
+      hcl: 'Sen reacción.', dur: 6, dens: 3.0,
+      nota: 'Procede de rochas básicas a temperatura e presión medias. Tamén pode ser un reaxuste tardío de granulitas e eclogitas ao ascender.',
+      v: { bg: '#222c27', L: [{ t: 'lines', c: '#3d4b43', n: 60, len: 22, a: -15, j: 8, w: 1.5 }, { t: 'lines', c: '#0b100d', n: 90, len: 26, a: -15, j: 8, w: 2.2 }, { t: 'dots', c: '#cfd4cb', r: 2.5, n: 90, o: .7 }] } },
+    { id: 'gne', n: 'Gneis félsico', p: 'CO', k: 'met', env: ['med'], T: [600, 800], P: [0.5, 1.0], amb: 'Codia media a profunda',
+      lupa: 'Bandas alternas de cuarzo e feldespato (claras) e mica ou anfíbol (escuras), de grao medio a groso.',
+      cor: 'Bandas brancas, rosadas e grises.',
+      hcl: 'Sen reacción.', dur: 6, dens: 2.7,
+      nota: 'Forma parte da unidade catazonal superior do Complexo de Cabo Ortegal, xunto coas granulitas.',
+      v: { bg: '#e2dbcf', L: [{ t: 'bands', cols: ['#e8e1d4', '#74706b', '#d8d0c3', '#4c4946', '#efe9df', '#a99f94'], n: 11, amp: 9 }, { t: 'dots', c: '#f6f1e8', r: 3, n: 60, o: .8 }, { t: 'dots', c: '#2e2c2a', r: 2, n: 60, o: .6 }] } },
+    { id: 'lou', n: 'Lousa', p: 'CR', k: 'met', env: ['hid'], T: [200, 350], P: [0.1, 0.4], amb: 'Metamorfismo de baixo grao',
+      lupa: 'Grao tan fino que non se ven cristais. Rompe en láminas planas e delgadas.',
+      cor: 'Gris escura a negra, con brillo sedoso nas superficies de clivaxe.',
+      hcl: 'Sen reacción.', dur: 3.5, dens: 2.75,
+      nota: 'Procede de lamas sedimentarias. É a rocha que ocupa maior extensión no Courel e as súas minas marcaron a economía no século XX.',
+      v: { bg: '#474d55', L: [{ t: 'lines', c: '#7a828c', n: 50, len: 150, a: -8, j: 3, w: 1, o: .45 }, { t: 'lines', c: '#2c3036', n: 90, len: 200, a: -8, j: 3, w: 1.4, o: .8 }] } },
+    { id: 'cua', n: 'Cuarcita', p: 'CR', k: 'met', env: ['hid', 'med'], T: [300, 600], P: [0.2, 0.8], amb: 'Metamorfismo de areniscas',
+      lupa: 'Grans de cuarzo recristalizados e soldados. A fractura corta os grans.',
+      cor: 'Branca, gris clara ou amarelada.',
+      hcl: 'Sen reacción.', dur: 7, dens: 2.65,
+      nota: 'Arenisca metamorfizada. Resiste moito á erosión e forma cristas e abas abruptas no Courel.',
+      v: { bg: '#e6e0d2', L: [{ t: 'dots', c: '#cfc7b3', r: 4, n: 180, o: .7 }, { t: 'dots', c: '#fbf8ee', r: 5, n: 260, e: .9, o: .9 }, { t: 'veins', c: '#b9744a', n: 2, w: 1.2, o: .35 }] } },
+    { id: 'cal', n: 'Calcaria', p: 'CR', k: 'sed', env: ['sup'], T: [0, 60], P: [0, 0.05], amb: 'Mares cálidos pouco profundos',
+      lupa: 'Grans moi finos de calcita. Ás veces fósiles ou veas brancas de calcita.',
+      cor: 'Gris, bege ou azulada, de brillo apagado.',
+      hcl: 'Efervescencia viva: burbullas de CO₂.', dur: 3, dens: 2.7,
+      nota: 'Precipita en augas mariñas pouco profundas, case sen presión. No Courel hai bandas de calcaria na serra, ao norte.',
+      v: { bg: '#b8b6ab', L: [{ t: 'dots', c: '#d3d0c4', r: 3, n: 300, o: .6 }, { t: 'dots', c: '#9d9b90', r: 2, n: 200, o: .5 }, { t: 'veins', c: '#f4f2ea', n: 3, w: 2, o: .9 }] } },
+    { id: 'dia', n: 'Diabasa', p: 'CR', k: 'ign', env: ['int'], T: [1000, 1200], P: [0, 0.1], amb: 'Diques e masas de magma pouco profundas',
+      lupa: 'Cristais alongados de plaxioclasa entrecruzados, de grao fino a medio.',
+      cor: 'Verde escura a negra.',
+      hcl: 'Sen reacción.', dur: 6, dens: 2.95,
+      nota: 'Magma básico que cristaliza a pouca profundidade. Hai pequenos afloramentos na serra do Courel.',
+      v: { bg: '#2d3532', L: [{ t: 'dots', c: '#4f5c54', r: 3, n: 80, o: .8 }, { t: 'dots', c: '#111614', r: 4, n: 130 }, { t: 'lines', c: '#9aa89d', n: 150, len: 15, a: 0, j: 180, w: 2.2, o: .8 }] } },
+    { id: 'qz', n: 'Cuarzo', p: 'AM', k: 'min', env: ['hid', 'med'], T: [300, 700], P: [0.1, 0.8], amb: 'Veas hidrotermais e rochas metamórficas',
+      lupa: 'Cristais prismáticos hexagonais ou masa vítrea con fractura concoide.',
+      cor: 'Incoloro ou branco leitoso, brillo vítreo. Raia branca.',
+      hcl: 'Sen reacción.', dur: 7, dens: 2.65,
+      nota: 'Compoñente principal das cuarcitas. Aparece en veas nas rochas deformadas dos dous xeoparques.',
+      v: { bg: '#2b3036', L: [{ t: 'hex', c: '#e9eef0', r: 30, n: 5, s: '#9fb0b5', o: .88 }, { t: 'hex', c: '#f7fafb', r: 16, n: 6, s: '#9fb0b5', o: .8 }] } },
+    { id: 'grt', n: 'Granate', p: 'CO', k: 'min', env: ['inf', 'alt'], T: [500, 900], P: [0.5, 2.2], amb: 'Rochas metamórficas de alta T e P',
+      lupa: 'Cristais redondeados de 12 ou 24 caras, sen clivaxe.',
+      cor: 'Vermello escuro con brillo vítreo. Raia branca.',
+      hcl: 'Sen reacción.', dur: 7, dens: 3.9,
+      nota: 'Indica altas temperaturas e presións. É o mineral que caracteriza granulitas e eclogitas.',
+      v: { bg: '#6b6f73', L: [{ t: 'dots', c: '#8c9094', r: 10, n: 70, o: .6 }, { t: 'hex', c: '#a3202c', r: 20, n: 8, s: '#4b0c13' }] } },
+    { id: 'oli', n: 'Olivino', p: 'CO', k: 'min', env: ['man'], T: [1000, 1300], P: [1.0, 3.0], amb: 'Manto superior',
+      lupa: 'Grans pequenos, redondeados e translúcidos.',
+      cor: 'Verde oliva con brillo vítreo.',
+      hcl: 'Sen reacción.', dur: 6.5, dens: 3.3,
+      nota: 'Mineral dominante do manto. Ao hidratarse pasa a serpentina e, ao oxidarse o ferro, vira pardo.',
+      v: { bg: '#1f2418', L: [{ t: 'dots', c: '#7e9a2d', r: 5, n: 160, o: .9 }, { t: 'dots', c: '#a9c43d', r: 7, n: 200, o: .9, s: '#6f8321' }] } },
+    { id: 'asp', n: 'Arsenopirita', p: 'CO', k: 'min', env: ['hid'], T: [300, 500], P: [0.05, 0.3], amb: 'Veas hidrotermais',
+      lupa: 'Cristais prismáticos curtos con caras estriadas.',
+      cor: 'Branca prateada con brillo metálico. Raia negra-grisácea.',
+      hcl: 'Sen reacción.', dur: 6, dens: 6.1,
+      nota: 'Sulfuro de ferro e arsénico (FeAsS) formado por fluídos quentes. O proxecto do xeoparque cita unha mineralización no contacto entre dúas rochas, explotada a comezos do século XX.',
+      v: { bg: '#6b6e70', L: [{ t: 'dots', c: '#8a8d8f', r: 15, n: 40, o: .5 }, { t: 'rhomb', c: '#e4e7e9', r: 15, n: 22, s: '#7c8286' }] } },
+    { id: 'aur', n: 'Ouro nativo', p: 'CR', k: 'min', env: ['hid'], T: [200, 400], P: [0.05, 0.3], amb: 'Veas de cuarzo hidrotermais',
+      lupa: 'Gránulos e láminas irregulares. É maleable: deformase en vez de romper.',
+      cor: 'Amarelo intenso con brillo metálico. Raia amarela.',
+      hcl: 'Sen reacción.', dur: 2.8, dens: 19.3,
+      nota: 'O Courel conserva a pegada da minaría aurífera romana, como o túnel de Montefurado e as minas de Margaride.',
+      v: { bg: '#e7e3d8', L: [{ t: 'dots', c: '#f4f1e8', r: 10, n: 60, o: .7 }, { t: 'veins', c: '#c9c3b3', n: 3, w: 1.2, o: .6 }, { t: 'dots', c: '#d8a31a', r: 5, n: 26, e: .5, s: '#8a6410' }] } },
+    { id: 'fer', n: 'Mineral de ferro', p: 'CR', k: 'min', env: ['sup'], T: [0, 50], P: [0, 0.02], amb: 'Alteración superficial e cuncas sedimentarias',
+      lupa: 'Masas terrosas ou arriñonadas (botrioidais) de óxidos de ferro.',
+      cor: 'Vermello a pardo. Raia vermella-parda (hematita) ou amarela-parda (limonita).',
+      hcl: 'Sen reacción.', dur: 5, dens: 4.5,
+      nota: 'Aparece no contacto entre rochas do Ordovícico e do Silúrico. Entre os séculos XVI e XIX a serra do Courel viviu un auxe do ferro.',
+      v: { bg: '#6b3420', L: [{ t: 'dots', c: '#9a4a2b', r: 18, n: 36, s: '#4e2113' }, { t: 'dots', c: '#c06a3e', r: 9, n: 50, o: .8 }, { t: 'dots', c: '#3f1c10', r: 5, n: 50, o: .7 }] } }
+  ];
+  var BYID = {}; ROCKS.forEach(function (r, i) { r.i = i; BYID[r.id] = r; });
+  function depthKm(p) { return p * 33; }
+  function depTxt(r) {
+    if (r.P[1] <= 0.1) return '< 3 km';
+    return Math.round(depthKm(r.P[0])) + '–' + Math.round(depthKm(r.P[1])) + ' km';
+  }
+  function tTxt(r) { return r.T[0] + '–' + r.T[1] + ' °C'; }
+  function pTxt(r) { return fmt(r.P[0]) + '–' + fmt(r.P[1]) + ' GPa'; }
+
+  /* ---------- tabs ---------- */
+  var tabIds = ['bancada', 'clasificar', 'pt', 'reto'];
+  function showTab(id) {
+    tabIds.forEach(function (k) {
+      $('#p-' + k).hidden = k !== id;
+      $('#t-' + k).setAttribute('aria-selected', k === id ? 'true' : 'false');
+    });
+  }
+  $$('.tab').forEach(function (b) { b.addEventListener('click', function () { showTab(b.dataset.id); }); });
+
+  /* ---------- specimen renderer ---------- */
+  function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function hashStr(s) { var h = 2166136261; for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  var uid = 0;
+  function f1(x) { return x.toFixed(1); }
+  function specimen(r, z, label) {
+    z = z || 1;
+    var R = mulberry(hashStr(r.id) + (z > 1 ? 7 : 0)), id = 'cp' + (++uid), out = '';
+    r.v.L.forEach(function (l) {
+      var i, n;
+      if (l.t === 'dots') {
+        n = Math.max(4, Math.round(l.n / (z * z)));
+        for (i = 0; i < n; i++) {
+          var x = R() * 320, y = R() * 220, rx = l.r * z * (0.6 + R() * 0.8), ry = rx * (l.e || 1), rot = Math.round(R() * 180);
+          out += '<ellipse cx="' + f1(x) + '" cy="' + f1(y) + '" rx="' + f1(rx) + '" ry="' + f1(ry) + '" transform="rotate(' + rot + ' ' + f1(x) + ' ' + f1(y) + ')" fill="' + l.c + '"' + (l.s ? ' stroke="' + l.s + '" stroke-width="1"' : '') + ' opacity="' + (l.o || 1) + '"/>';
+        }
+      } else if (l.t === 'bands') {
+        var nb = Math.max(3, Math.round(l.n / z)), b = [], ph = [], k, xx, d;
+        for (k = 0; k <= nb; k++) { b.push(k === 0 ? -10 : k === nb ? 230 : (k + (R() - .5) * .7) * 220 / nb); ph.push(R() * 6.28); }
+        var amp = l.amp * z, wl = 70 * z;
+        var yAt = function (kk, x) { return (kk > 0 && kk < nb) ? b[kk] + amp * Math.sin(x / wl * 6.28 + ph[kk]) : b[kk]; };
+        for (k = 0; k < nb; k++) {
+          d = 'M0 ' + f1(yAt(k, 0));
+          for (xx = 16; xx <= 336; xx += 16) d += ' L' + xx + ' ' + f1(yAt(k, xx));
+          for (xx = 336; xx >= 0; xx -= 16) d += ' L' + xx + ' ' + f1(yAt(k + 1, xx));
+          out += '<path d="' + d + ' Z" fill="' + l.cols[k % l.cols.length] + '"/>';
+        }
+      } else if (l.t === 'lines') {
+        n = Math.max(4, Math.round(l.n / z));
+        for (i = 0; i < n; i++) {
+          var lx = R() * 360 - 20, ly = R() * 220, len = l.len * z * (0.5 + R()), a = (l.a + (R() - .5) * (l.j || 6)) * Math.PI / 180;
+          out += '<line x1="' + f1(lx) + '" y1="' + f1(ly) + '" x2="' + f1(lx + Math.cos(a) * len) + '" y2="' + f1(ly + Math.sin(a) * len) + '" stroke="' + l.c + '" stroke-width="' + f1(l.w * Math.sqrt(z)) + '" stroke-linecap="round" opacity="' + (l.o || 1) + '"/>';
+        }
+      } else if (l.t === 'hex' || l.t === 'rhomb') {
+        n = Math.max(2, Math.round(l.n / (z * z)));
+        for (i = 0; i < n; i++) {
+          var cx = R() * 320, cy = R() * 220, rr = l.r * z * (0.7 + R() * 0.6), ro = R() * Math.PI, pts = [], q, m = l.t === 'hex' ? 6 : 4;
+          for (q = 0; q < m; q++) {
+            var an = ro + q * 2 * Math.PI / m, sx = l.t === 'rhomb' ? (q % 2 ? 0.55 : 1) : 1;
+            pts.push(f1(cx + Math.cos(an) * rr * sx) + ',' + f1(cy + Math.sin(an) * rr * sx));
+          }
+          out += '<polygon points="' + pts.join(' ') + '" fill="' + l.c + '" stroke="' + (l.s || 'none') + '" stroke-width="1.2" opacity="' + (l.o || 1) + '"/>';
+        }
+      } else if (l.t === 'veins') {
+        n = Math.max(1, Math.round(l.n / Math.sqrt(z)));
+        for (i = 0; i < n; i++) {
+          var x0 = R() * 320;
+          out += '<path d="M' + f1(x0) + ' -5 C' + f1(x0 + 40 * z) + ' 60,' + f1(x0 - 40 * z) + ' 120,' + f1(x0 + R() * 50) + ' 225" stroke="' + l.c + '" stroke-width="' + f1(l.w * Math.sqrt(z)) + '" fill="none" opacity="' + (l.o || 1) + '"/>';
+        }
+      } else if (l.t === 'rind') {
+        out += '<path d="M235 -5 L325 -5 L325 225 L262 225 Q248 110 235 -5 Z" fill="' + l.c + '" opacity=".55"/>';
+      }
+    });
+    return '<svg viewBox="0 0 320 220" role="img" aria-label="' + esc(label || 'Mostra') + '"><defs><clipPath id="' + id + '"><rect width="320" height="220" rx="12"/></clipPath></defs><g clip-path="url(#' + id + ')"><rect width="320" height="220" fill="' + r.v.bg + '"/>' + out + '</g></svg>';
+  }
+
+  /* ---------- ficha ---------- */
+  function ficha(r) {
+    return '<div class="ficha"><h3>' + esc(r.n) + '</h3><div class="tags"><span class="tag">' + PARK[r.p] + '</span><span class="tag k-' + r.k + '"><i></i>' + KIND[r.k] + '</span></div>' +
+      '<dl class="pt"><div class="t"><dt>Temperatura</dt><dd>' + tTxt(r) + '</dd></div><div class="p"><dt>Presión</dt><dd>' + pTxt(r) + '</dd></div><div class="d"><dt>Profundidade</dt><dd>' + depTxt(r) + '</dd></div></dl>' +
+      '<p><b>Ambiente:</b> ' + esc(r.amb) + '.</p><p class="note">' + esc(r.nota) + '</p></div>';
+  }
+
+  /* ================= BANCADA ================= */
+  var order = shuffle(ROCKS.map(function (r) { return r.i; }));
+  var B = { cur: 0, zoom: 1, done: {}, tests: {}, tipo: null, showNames: false, msg: null };
+  function curRock() { return ROCKS[order[B.cur]]; }
+  var TESTS = {
+    lupa: { label: 'Lupa', f: function (r) { return r.lupa; } },
+    cor: { label: 'Cor e brillo', f: function (r) { return r.cor; } },
+    un: { label: 'Uña (2,5)', h: 2.5 }, mo: { label: 'Moeda (3,5)', h: 3.5 },
+    na: { label: 'Navalla (5,5)', h: 5.5 }, cz: { label: 'Cuarzo (7)', h: 7 },
+    hcl: { label: 'HCl diluído', f: function (r) { return r.hcl; } },
+    dens: { label: 'Densidade', f: function (r) { return fmt(r.dens) + ' g/cm³'; } }
+  };
+  function testResult(key, r) {
+    var t = TESTS[key];
+    if (t.h) return t.h > r.dur ? 'A mostra raiase.' : 'A mostra non se raia.';
+    return t.f(r);
+  }
+  function renderShelf() {
+    $('#shelf').innerHTML = order.map(function (ri, k) {
+      var r = ROCKS[ri], done = B.done[r.id], showN = done || B.showNames;
+      return '<button class="tile' + (k === B.cur ? ' cur' : '') + (done ? ' done' : '') + '" data-k="' + k + '" role="listitem" aria-label="Mostra ' + (k + 1) + (done ? ': ' + esc(r.n) : '') + '">' +
+        specimen(r, 1, 'Mostra ' + (k + 1)) + '<span class="num">' + (k + 1) + '</span><span class="nm">' + (showN ? esc(r.n) : '&nbsp;') + '</span></button>';
+    }).join('');
+    var n = Object.keys(B.done).length;
+    $('#prog').textContent = n + ' de ' + ROCKS.length + ' mostras identificadas';
+  }
+  function renderStage() {
+    var r = curRock();
+    $('#specimen').innerHTML = specimen(r, B.zoom, 'Mostra ' + (B.cur + 1) + (B.zoom > 1 ? ' vista coa lupa' : ''));
+    $('#vMan').classList.toggle('on', B.zoom === 1);
+    $('#vLupa').classList.toggle('on', B.zoom > 1);
+    $('#scaleTxt').textContent = B.zoom > 1 ? 'Ancho da imaxe ≈ 2 cm (lupa 10×)' : 'Ancho da imaxe ≈ 6 cm (mostra de man)';
+    $('#sampleTag').textContent = 'Mostra ' + (B.cur + 1) + ' de ' + ROCKS.length;
+  }
+  function renderLog() {
+    var r = curRock(), t = B.tests[r.id] || {}, keys = Object.keys(TESTS).filter(function (k) { return t[k]; });
+    $('#log').innerHTML = keys.length ? keys.map(function (k) { return '<li><b>' + TESTS[k].label + '</b>' + esc(testResult(k, r)) + '</li>'; }).join('') : '<li class="empty">Aínda non fixeches ningunha proba. Empeza pola lupa e pola cor.</li>';
+  }
+  function renderId() {
+    var r = curRock(), box = $('#idbox');
+    if (B.done[r.id]) {
+      box.innerHTML = '<div class="msg ok">Correcto.</div>' + ficha(r) + '<div class="row"><button class="btn go" id="toPT">Ver no diagrama Tª–P</button>' + (B.cur < ROCKS.length - 1 ? '<button class="btn" id="nextS">Seguinte mostra</button>' : '') + '</div>';
+      $('#toPT').addEventListener('click', function () { selectRock(r.id); showTab('pt'); });
+      var nx = $('#nextS'); if (nx) nx.addEventListener('click', function () { selectSample(B.cur + 1); });
+      return;
+    }
+    var names = ROCKS.slice().sort(function (a, b) { return a.n.localeCompare(b.n, 'gl'); });
+    box.innerHTML = '<div class="idform"><h3 style="font-size:1rem">Identifica a mostra</h3>' +
+      '<div class="row"><span class="gl">Tipo</span>' + ['ign', 'sed', 'met', 'min'].map(function (k) { return '<button class="chip' + (B.tipo === k ? ' on' : '') + '" data-tipo="' + k + '">' + KIND[k] + '</button>'; }).join('') + '</div>' +
+      '<label class="gl" for="nameSel">Nome</label><select id="nameSel"><option value="">Escolle un nome</option>' + names.map(function (x) { return '<option value="' + x.id + '">' + esc(x.n) + '</option>'; }).join('') + '</select>' +
+      '<div><button class="btn go" id="chk">Comprobar</button></div>' +
+      (B.msg ? '<div class="msg ' + B.msg.c + '">' + esc(B.msg.t) + '</div>' : '') + '</div>';
+    $$('[data-tipo]', box).forEach(function (b) { b.addEventListener('click', function () { B.tipo = b.dataset.tipo; B.msg = null; renderId(); }); });
+    $('#chk').addEventListener('click', function () {
+      var v = $('#nameSel').value;
+      if (!B.tipo || !v) { B.msg = { c: 'no', t: 'Escolle un tipo e un nome antes de comprobar.' }; renderId(); return; }
+      var ok = v === r.id, tok = B.tipo === r.k;
+      if (ok && tok) { B.done[r.id] = true; B.msg = null; B.tipo = null; renderShelf(); renderId(); return; }
+      B.msg = { c: 'no', t: ok ? 'O nome está ben pero o tipo non. Revisa se é ígnea, sedimentaria, metamórfica ou mineral.' : tok ? 'O tipo é correcto, pero esa non é a mostra. Repasa as probas.' : 'Aínda non. Repasa a textura, a dureza e a reacción co ácido.' };
+      var keep = v; renderId(); $('#nameSel').value = keep;
+    });
+  }
+  function selectSample(k) { B.cur = k; B.zoom = 1; B.tipo = null; B.msg = null; renderShelf(); renderStage(); renderLog(); renderId(); }
+  $('#shelf').addEventListener('click', function (e) { var t = e.target.closest('.tile'); if (t) selectSample(+t.dataset.k); });
+  $('#vMan').addEventListener('click', function () { B.zoom = 1; renderStage(); });
+  $('#vLupa').addEventListener('click', function () { B.zoom = 3; renderStage(); });
+  $('#showNames').addEventListener('change', function (e) { B.showNames = e.target.checked; renderShelf(); });
+  $$('[data-test]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var r = curRock(), k = b.dataset.test;
+      (B.tests[r.id] = B.tests[r.id] || {})[k] = true;
+      if (k === 'lupa') { B.zoom = 3; renderStage(); }
+      renderLog();
+    });
+  });
+  selectSample(0);
+
+  /* ================= CLASIFICAR ================= */
+  var C = { mode: 'tipo', deck: [], i: 0, score: 0, answered: false };
+  function startSort() { C.deck = shuffle(ROCKS.map(function (r) { return r.i; })); C.i = 0; C.score = 0; C.answered = false; renderSort(); }
+  function renderSort() {
+    var box = $('#sortbox');
+    if (C.i >= C.deck.length) {
+      var pct = Math.round(C.score / C.deck.length * 100);
+      box.innerHTML = '<div class="card"><p class="gl">Resultado</p><p class="score">' + C.score + ' / ' + C.deck.length + '</p><p>' + (pct >= 80 ? 'Moi ben.' : pct >= 50 ? 'Vas ben. Repasa as fichas na bancada e o diagrama.' : 'Repasa as fichas da bancada e proba de novo.') + '</p><div class="row" style="margin-top:10px"><button class="btn go" id="again">Repetir</button></div></div>';
+      $('#again').addEventListener('click', startSort);
+      return;
+    }
+    var r = ROCKS[C.deck[C.i]], bins;
+    if (C.mode === 'tipo') bins = ['ign', 'sed', 'met', 'min'].map(function (k) { return { id: k, t: KIND[k], d: '' }; });
+    else bins = Object.keys(ENVS).map(function (k) { return { id: k, t: ENVS[k].n, d: ENVS[k].d }; });
+    box.innerHTML = '<div class="sort"><div class="card"><div class="spec">' + specimen(r, 1, 'Mostra de ' + r.n) + '</div><h3 style="margin-top:10px">' + esc(r.n) + '</h3><p class="prog">' + PARK[r.p] + ' · ' + (C.i + 1) + ' de ' + C.deck.length + '</p></div>' +
+      '<div class="card"><p style="font-weight:700;margin-bottom:10px">' + (C.mode === 'tipo' ? 'Que tipo é?' : 'Onde se formou? Elixe o ambiente.') + '</p><div class="bins">' +
+      bins.map(function (b) { return '<button class="btn" data-bin="' + b.id + '">' + esc(b.t) + (b.d ? '<small>' + esc(b.d) + '</small>' : '') + '</button>'; }).join('') +
+      '</div><p class="explain" id="sfb" style="margin-top:10px;color:var(--muted)"></p><div class="row" style="margin-top:8px"><button class="btn go" id="snext" hidden>Seguinte</button></div></div></div>';
+    $$('[data-bin]', box).forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (C.answered) return; C.answered = true;
+        var v = b.dataset.bin, ok = C.mode === 'tipo' ? v === r.k : r.env.indexOf(v) >= 0, good = C.mode === 'tipo' ? r.k : r.env[0];
+        if (ok) C.score++;
+        $$('[data-bin]', box).forEach(function (x) {
+          x.disabled = true;
+          if (x.dataset.bin === good || (C.mode === 'env' && r.env.indexOf(x.dataset.bin) >= 0)) x.classList.add('right');
+          else if (x === b) x.classList.add('wrong');
+        });
+        $('#sfb').textContent = (ok ? 'Correcto. ' : 'Non é esa. ') + (C.mode === 'tipo' ? r.n + ': ' + KIND[r.k].toLowerCase() + '.' : r.n + ': ' + tTxt(r) + ' e ' + pTxt(r) + ' (' + depTxt(r) + '). ' + r.amb + '.');
+        var nb = $('#snext'); nb.hidden = false; nb.textContent = C.i === C.deck.length - 1 ? 'Ver resultado' : 'Seguinte';
+        nb.addEventListener('click', function () { C.i++; C.answered = false; renderSort(); });
+      });
+    });
+  }
+  $('#mTipo').addEventListener('click', function () { C.mode = 'tipo'; $('#mTipo').classList.add('on'); $('#mEnv').classList.remove('on'); startSort(); });
+  $('#mEnv').addEventListener('click', function () { C.mode = 'env'; $('#mEnv').classList.add('on'); $('#mTipo').classList.remove('on'); startSort(); });
+  startSort();
+
+  /* ================= DIAGRAMA Tª–P ================= */
+  var X0 = 62, X1 = 690, Y0 = 20, Y1 = 464, TM = 1400, PM = 3;
+  function px(T) { return X0 + T / TM * (X1 - X0); }
+  function py(P) { return Y0 + P / PM * (Y1 - Y0); }
+  function ix(x) { return (x - X0) / (X1 - X0) * TM; }
+  function iy(y) { return (y - Y0) / (Y1 - Y0) * PM; }
+  var FAC = [
+    { id: 'diax', n: 'Diaxénese', c: 'var(--f-diax)', poly: [[0, 0], [200, 0], [150, 0.5], [0, 0.5]], lbl: [75, 0.33], small: true },
+    { id: 'xv', n: 'Xisto verde', c: 'var(--f-xv)', poly: [[200, 0], [500, 0], [540, 0.9], [350, 1.0], [150, 0.5]], lbl: [350, 0.13] },
+    { id: 'anf', n: 'Anfibolita', c: 'var(--f-anf)', poly: [[500, 0], [700, 0], [720, 0.9], [730, 1.3], [550, 1.3], [540, 0.9]], lbl: [610, 0.13] },
+    { id: 'gra', n: 'Granulita', c: 'var(--f-gra)', poly: [[700, 0], [1000, 0], [1000, 1.0], [900, 1.4], [730, 1.3], [720, 0.9]], lbl: [850, 0.13] },
+    { id: 'ecl', n: 'Eclogita', c: 'var(--f-ecl)', poly: [[350, 1.0], [540, 0.9], [550, 1.3], [730, 1.3], [900, 1.4], [1000, 1.0], [1000, 3], [450, 3], [450, 1.5]], lbl: [720, 2.75] },
+    { id: 'blu', n: 'Baixa T e alta P (subdución fría)', c: 'var(--f-blu)', poly: [[0, 0.5], [150, 0.5], [350, 1.0], [450, 1.5], [450, 3], [0, 3]], lbl: [210, 2.3], small: true },
+    { id: 'man', n: 'Fusión parcial e manto', c: 'var(--f-man)', poly: [[1000, 0], [1400, 0], [1400, 3], [1000, 3]], lbl: [1200, 0.7], small: true }
+  ];
+  var GEO = [
+    { n: 'Subdución ≈ 6 °C/km', a: 0, b: 200, pmax: 3 },
+    { n: 'Continente estable ≈ 20 °C/km', a: 10, b: 660, pmax: 2.1 },
+    { n: 'Oróxeno ≈ 30 °C/km', a: 10, b: 990, pmax: 1.4 }
+  ];
+  function inPoly(T, P, poly) {
+    var c = false, i, j;
+    for (i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      var xi = poly[i][0], yi = poly[i][1], xj = poly[j][0], yj = poly[j][1];
+      if (((yi > P) !== (yj > P)) && (T < (xj - xi) * (P - yi) / (yj - yi) + xi)) c = !c;
+    }
+    return c;
+  }
+  function faciesAt(T, P) { for (var i = 0; i < FAC.length; i++) if (inPoly(T, P, FAC[i].poly)) return FAC[i].n; return '—'; }
+  var PT = { mode: 'exp', sel: null, geo: true, probe: null, g: { deck: [], i: 0, score: 0, done: false, guess: null, tot: 0 } };
+
+  var marks = ROCKS.map(function (r) { return { r: r, x: px((r.T[0] + r.T[1]) / 2), y: py((r.P[0] + r.P[1]) / 2) }; });
+  (function nudge() {
+    marks.forEach(function (m, i) {
+      var tries = 0;
+      function clash() { for (var j = 0; j < i; j++) { var dx = marks[j].x - m.x, dy = marks[j].y - m.y; if (dx * dx + dy * dy < 200) return true; } return false; }
+      while (clash() && tries < 10) { m.x += 13; m.y += 9; tries++; }
+    });
+  })();
+  var KCOL = { ign: 'var(--k-ign)', met: 'var(--k-met)', sed: 'var(--k-sed)', min: 'var(--k-min)' };
+
+  function drawPT() {
+    var s = '', i;
+    FAC.forEach(function (f) {
+      s += '<polygon class="fac" fill="' + f.c + '" points="' + f.poly.map(function (p) { return f1(px(p[0])) + ',' + f1(py(p[1])); }).join(' ') + '"/>';
+    });
+    for (i = 0; i <= 1400; i += 200) { s += '<line class="gridl" x1="' + px(i) + '" y1="' + Y0 + '" x2="' + px(i) + '" y2="' + Y1 + '" opacity=".35"/><text class="tick" x="' + px(i) + '" y="' + (Y1 + 18) + '" text-anchor="middle">' + i + '</text>'; }
+    for (i = 0; i <= 3; i += 0.5) { s += '<line class="gridl" x1="' + X0 + '" y1="' + py(i) + '" x2="' + X1 + '" y2="' + py(i) + '" opacity=".35"/><text class="tick" x="' + (X0 - 8) + '" y="' + (py(i) + 4) + '" text-anchor="end">' + fmt(i.toFixed(1)) + '</text>'; }
+    [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].forEach(function (km) {
+      var P = km / 33; if (P > PM) return;
+      s += '<line class="ax" x1="' + X1 + '" y1="' + py(P) + '" x2="' + (X1 + 5) + '" y2="' + py(P) + '"/>' + (km % 20 === 0 || km === 10 ? '<text class="tick" x="' + (X1 + 9) + '" y="' + (py(P) + 4) + '">' + km + '</text>' : '');
+    });
+    s += '<rect class="ax" x="' + X0 + '" y="' + Y0 + '" width="' + (X1 - X0) + '" height="' + (Y1 - Y0) + '"/>';
+    s += '<text class="axt" x="' + ((X0 + X1) / 2) + '" y="' + (Y1 + 42) + '" text-anchor="middle">Temperatura (°C)</text>';
+    s += '<text class="axt" transform="translate(16 ' + ((Y0 + Y1) / 2) + ') rotate(-90)" text-anchor="middle">Presión (GPa)</text>';
+    s += '<text class="axt" transform="translate(748 ' + ((Y0 + Y1) / 2) + ') rotate(90)" text-anchor="middle">Profundidade (km)</text>';
+    FAC.forEach(function (f) { s += '<text class="faclbl" x="' + px(f.lbl[0]) + '" y="' + py(f.lbl[1]) + '" text-anchor="middle"' + (f.small ? ' style="font-size:12.5px"' : '') + '>' + esc(f.n) + '</text>'; });
+    s += '<g id="geoG"></g><g id="selG" pointer-events="none"></g><rect id="hit" x="' + X0 + '" y="' + Y0 + '" width="' + (X1 - X0) + '" height="' + (Y1 - Y0) + '" fill="transparent"/><g id="probeG" pointer-events="none"></g><g id="mkG"></g>';
+    $('#ptsvg').innerHTML = s;
+    drawGeo(); drawMarks(); drawSel(); drawProbe();
+  }
+  function drawGeo() {
+    var g = $('#geoG'); $('#geoLeg').hidden = !PT.geo; if (!PT.geo) { g.innerHTML = ''; return; }
+    g.innerHTML = GEO.map(function (q, k) {
+      var P1 = q.pmax, T1 = q.a + q.b * P1;
+      var tag = 'ABC'.charAt(k), ex = Math.min(px(T1), X1 - 10), ey = py(P1) - (k === 0 ? 10 : 9);
+      return '<line class="geo" x1="' + px(q.a) + '" y1="' + py(0) + '" x2="' + px(T1) + '" y2="' + py(P1) + '"/><circle cx="' + ex + '" cy="' + (k === 0 ? py(P1) - 12 : ey) + '" r="10" fill="var(--surface)" stroke="var(--ink)"/><text class="geolbl" style="stroke:none" x="' + ex + '" y="' + ((k === 0 ? py(P1) - 12 : ey) + 4.5) + '" text-anchor="middle">' + tag + '</text>';
+    }).join('');
+  }
+  function drawMarks() {
+    var g = $('#mkG');
+    if (PT.mode === 'guess') { g.innerHTML = ''; return; }
+    g.innerHTML = marks.map(function (m) {
+      return '<circle class="mk' + (PT.sel === m.r.id ? ' sel' : '') + '" data-id="' + m.r.id + '" cx="' + f1(m.x) + '" cy="' + f1(m.y) + '" r="7" fill="' + KCOL[m.r.k] + '" tabindex="0" role="button" aria-label="' + esc(m.r.n) + '"/>';
+    }).join('');
+  }
+  function drawSel() {
+    var g = $('#selG'), r = PT.mode === 'guess' ? (PT.g.done ? PT.g.deck[PT.g.i] !== undefined && ROCKS[PT.g.deck[PT.g.i]] : null) : (PT.sel ? BYID[PT.sel] : null);
+    if (!r) { g.innerHTML = ''; return; }
+    var x = px(r.T[0]), y = py(r.P[0]), w = Math.max(8, px(r.T[1]) - px(r.T[0])), h = Math.max(8, py(r.P[1]) - py(r.P[0]));
+    var ty = y > 40 ? y - 7 : y + h + 16;
+    g.innerHTML = '<rect class="rng" x="' + f1(x) + '" y="' + f1(y) + '" width="' + f1(w) + '" height="' + f1(h) + '" rx="6"/><text class="rnglbl" x="' + f1(Math.min(x, X1 - 90)) + '" y="' + f1(ty) + '">' + esc(r.n) + '</text>';
+  }
+  function drawProbe() {
+    var g = $('#probeG'), s = '';
+    if (PT.probe) {
+      var x = px(PT.probe.T), y = py(PT.probe.P);
+      s += '<line class="probe" x1="' + x + '" y1="' + Y0 + '" x2="' + x + '" y2="' + Y1 + '"/><line class="probe" x1="' + X0 + '" y1="' + y + '" x2="' + X1 + '" y2="' + y + '"/><circle class="probepin" cx="' + x + '" cy="' + y + '" r="5"/>';
+    }
+    if (PT.mode === 'guess' && PT.g.guess) s += '<circle class="guess" cx="' + px(PT.g.guess.T) + '" cy="' + py(PT.g.guess.P) + '" r="8"/>';
+    g.innerHTML = s;
+  }
+  function drawProbeRd() {
+    var p = PT.probe, rd = $('#probeRd');
+    if (!p) { rd.innerHTML = '<div><dt>Posición</dt><dd>Sen sonda</dd></div>'; return; }
+    var hits = ROCKS.filter(function (r) { return p.T >= r.T[0] && p.T <= r.T[1] && p.P >= r.P[0] && p.P <= r.P[1]; }).map(function (r) { return r.n; });
+    rd.innerHTML = '<div><dt>Temperatura</dt><dd>' + Math.round(p.T) + ' °C</dd></div><div><dt>Presión</dt><dd>' + fmt(p.P.toFixed(2)) + ' GPa</dd></div><div><dt>Profundidade</dt><dd>' + Math.round(depthKm(p.P)) + ' km</dd></div><div><dt>Campo</dt><dd>' + esc(faciesAt(p.T, p.P)) + '</dd></div><div><dt>Posibles</dt><dd>' + (hits.length ? esc(hits.join(', ')) : 'ningunha das mostras') + '</dd></div>';
+  }
+  function setProbe(T, P) { PT.probe = { T: Math.max(0, Math.min(TM, T)), P: Math.max(0, Math.min(PM, P)) }; drawProbe(); drawProbeRd(); }
+  function svgPoint(e) {
+    var svg = $('#ptsvg'), pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+    var m = svg.getScreenCTM(); if (!m) return null; return pt.matrixTransform(m.inverse());
+  }
+  function selectRock(id) { PT.sel = id; PT.mode = 'exp'; $('#mExp').classList.add('on'); $('#mGuess').classList.remove('on'); drawMarks(); drawSel(); renderSide(); }
+  function renderSide() {
+    var box = $('#ptside');
+    if (PT.mode === 'guess') {
+      var g = PT.g;
+      if (g.i >= g.deck.length) {
+        box.innerHTML = '<p class="gl">Resultado</p><p class="score">' + g.score + ' / ' + g.deck.length + '</p><p>Cada acerto é unha rocha situada no seu campo de Tª e P.</p><div class="row" style="margin-top:8px"><button class="btn go" id="gAgain">Repetir</button></div>';
+        $('#gAgain').addEventListener('click', startGuess); return;
+      }
+      var r = ROCKS[g.deck[g.i]];
+      box.innerHTML = '<p class="gl">Rocha ' + (g.i + 1) + ' de ' + g.deck.length + '</p><h3 style="margin:4px 0 6px">' + esc(r.n) + '</h3><p>Toca o diagrama onde cres que se formou: Tª e presión.</p>' +
+        '<p class="msg' + (g.msg ? (g.ok ? ' ok' : ' no') : '') + '" id="gmsg" style="margin-top:10px"' + (g.msg ? '' : ' hidden') + '>' + esc(g.msg || '') + '</p>' +
+        (g.done ? '<dl class="pt" style="margin-top:10px"><div class="t"><dt>Temperatura</dt><dd>' + tTxt(r) + '</dd></div><div class="p"><dt>Presión</dt><dd>' + pTxt(r) + '</dd></div><div class="d"><dt>Profundidade</dt><dd>' + depTxt(r) + '</dd></div></dl><p class="note" style="color:var(--muted);margin-top:8px">' + esc(r.amb) + '.</p><div class="row" style="margin-top:8px"><button class="btn go" id="gNext">' + (g.i === g.deck.length - 1 ? 'Ver resultado' : 'Seguinte rocha') + '</button></div>' : '');
+      var nx = $('#gNext'); if (nx) nx.addEventListener('click', function () { g.i++; g.done = false; g.guess = null; g.msg = null; renderSide(); drawSel(); drawProbe(); });
+      return;
+    }
+    if (!PT.sel) { box.innerHTML = '<p class="gl">Ficha</p><p class="empty" style="margin-top:6px">Toca un punto do diagrama ou elixe unha rocha na lista de abaixo. Verás o seu rango de temperatura e presión.</p>'; return; }
+    var rr = BYID[PT.sel], cT = (rr.T[0] + rr.T[1]) / 2, cP = (rr.P[0] + rr.P[1]) / 2;
+    box.innerHTML = ficha(rr) + '<p style="margin-top:8px"><b>Campo no diagrama:</b> ' + esc(faciesAt(cT, cP)) + '</p>';
+  }
+  function startGuess() {
+    PT.g = { deck: shuffle(ROCKS.map(function (r) { return r.i; })), i: 0, score: 0, done: false, guess: null, msg: null, ok: false };
+    drawMarks(); drawSel(); drawProbe(); renderSide();
+  }
+  function judge(T, P, r) {
+    var mT = 70, mP = 0.12, parts = [];
+    if (T < r.T[0] - mT) parts.push('Demasiado frío'); else if (T > r.T[1] + mT) parts.push('Demasiado quente');
+    if (P < r.P[0] - mP) parts.push('presión demasiado baixa (pouca profundidade)'); else if (P > r.P[1] + mP) parts.push('presión demasiado alta (demasiada profundidade)');
+    return parts;
+  }
+  function onPlot(e) {
+    var p = svgPoint(e); if (!p) return;
+    var T = ix(p.x), P = iy(p.y);
+    if (T < 0 || T > TM || P < 0 || P > PM) return;
+    if (PT.mode === 'guess') {
+      var g = PT.g; if (g.done || g.i >= g.deck.length) return;
+      var r = ROCKS[g.deck[g.i]], parts = judge(T, P, r);
+      g.guess = { T: T, P: P }; g.done = true; g.ok = parts.length === 0;
+      if (g.ok) { g.score++; g.msg = 'Correcto: a mostra cae no seu rango.'; }
+      else { g.msg = parts.join(' e ').replace(/^./, function (c) { return c.toUpperCase(); }) + '.'; }
+      setProbe(T, P); drawSel(); renderSide(); return;
+    }
+    setProbe(T, P);
+  }
+  $('#ptsvg').addEventListener('click', function (e) {
+    var m = e.target.closest && e.target.closest('.mk');
+    if (m && PT.mode === 'exp') { PT.sel = m.getAttribute('data-id'); drawMarks(); drawSel(); renderSide(); return; }
+    if (e.target.id === 'hit') onPlot(e);
+  });
+  $('#ptsvg').addEventListener('keydown', function (e) {
+    var m = e.target.closest && e.target.closest('.mk');
+    if (m && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); PT.sel = m.getAttribute('data-id'); drawMarks(); drawSel(); renderSide(); }
+  });
+  $('#ptsvg').addEventListener('pointermove', function (e) {
+    if (e.pointerType !== 'mouse' || PT.mode !== 'exp' || e.target.id !== 'hit') return;
+    var p = svgPoint(e); if (!p) return;
+    setProbe(ix(p.x), iy(p.y));
+  });
+  function setMode(m) {
+    PT.mode = m; $('#mExp').classList.toggle('on', m === 'exp'); $('#mGuess').classList.toggle('on', m === 'guess');
+    PT.probe = null; drawProbe(); drawProbeRd();
+    if (m === 'guess') startGuess(); else { drawMarks(); drawSel(); renderSide(); }
+  }
+  $('#mExp').addEventListener('click', function () { setMode('exp'); });
+  $('#mGuess').addEventListener('click', function () { setMode('guess'); });
+  $('#showGeo').addEventListener('change', function (e) { PT.geo = e.target.checked; drawGeo(); });
+  $('#ptchips').innerHTML = ROCKS.map(function (r) { return '<button class="chip" data-id="' + r.id + '"><i style="background:' + KCOL[r.k] + '"></i>' + esc(r.n) + '</button>'; }).join('');
+  $('#ptchips').addEventListener('click', function (e) { var c = e.target.closest('.chip'); if (c) selectRock(c.dataset.id); });
+  $('#tbl').innerHTML = '<tr><th>Rocha ou mineral</th><th>Tipo</th><th>Tª</th><th>Presión</th><th>Profundidade</th><th>Ambiente</th></tr>' +
+    ROCKS.map(function (r) { return '<tr><td><b>' + esc(r.n) + '</b></td><td>' + KIND[r.k] + '</td><td>' + tTxt(r) + '</td><td>' + pTxt(r) + '</td><td>' + depTxt(r) + '</td><td>' + esc(r.amb) + '</td></tr>'; }).join('');
+  drawPT(); drawProbeRd(); renderSide();
+
+  /* ================= RETO ================= */
+  var QZ = [
+    { q: 'Unha rocha verde cheia de granates vermellos e moi pesada. Que condicións indica?', o: ['T < 100 °C e presión case nula', 'Presión alta (> 1,4 GPa) e T arredor de 600–850 °C', 'T de 1200 °C a 2 km de profundidade', 'T de 250 °C e presión baixa'], a: 1, e: 'É unha eclogita: basalto de fondo oceánico enterrado a máis de 45 km.' },
+    { q: 'A peridotita de Cabo Ortegal procede…', o: ['Do fondo dun mar pouco profundo', 'Dun dique a 2 km de profundidade', 'Do manto superior', 'Da erosión dunha cuarcita'], a: 2, e: 'As peridotitas son anacos do manto, con olivino e piroxenos, a máis de 33 km e T moi altas.' },
+    { q: 'Unha mostra gris efervesce con HCl diluído. A rocha é…', o: ['Calcaria, formada a T e P moi baixas', 'Eclogita', 'Granulita', 'Cuarcita'], a: 0, e: 'A calcaria é carbonato cálcico (calcita) e fórmase en augas mariñas pouco profundas.' },
+    { q: 'Mineral incoloro, brillo vítreo, dureza 7, non o raia a navalla:', o: ['Calcita', 'Cuarzo', 'Ouro nativo', 'Serpentina'], a: 1, e: 'O cuarzo ten dureza 7 e fractura concoide.' },
+    { q: 'Rocha bandeada con granates da base da codia continental. Que T e P indica?', o: ['T 700–1000 °C, P media (0,5–1,3 GPa)', 'T 30 °C, P 0,01 GPa', 'T 1200 °C, P 0,05 GPa', 'T 250 °C, P 0,1 GPa'], a: 0, e: 'É unha granulita: metamorfismo de alta temperatura a 17–43 km.' },
+    { q: 'Aproximadamente, que presión hai a 33 km de profundidade?', o: ['0,1 GPa', '1 GPa', '10 GPa', '100 GPa'], a: 1, e: 'Na codia, 1 GPa equivale a uns 33 km de profundidade.' },
+    { q: 'Que gradiente xeotérmico favorece rochas de alta presión e temperatura relativamente baixa, como as eclogitas?', o: ['Un gradiente baixo, como nunha zona de subdución', 'Un gradiente moi alto, como nun volcán', 'Calquera: non depende do gradiente', 'Ningún: as eclogitas son sedimentarias'], a: 0, e: 'En subdución a codia mergulla e enterrase máis rápido do que se quenta: presión alta e T moderada.' },
+    { q: 'A diabasa cristaliza…', o: ['No manto a 100 km', 'A pouca profundidade, desde un magma moi quente', 'No fondo do mar, a 30 °C', 'En veas hidrotermais a 300 °C'], a: 1, e: 'É magma básico que cristaliza en diques e masas pouco profundas: T alta e presión baixa.' },
+    { q: 'A serpentinita nace cando…', o: ['Unha calcaria se funde', 'A auga hidrata o olivino das peridotitas', 'Unha lousa se enterra a 100 km', 'O cuarzo se une ao ouro'], a: 1, e: 'A serpentinización é unha hidratación de rochas do manto a temperaturas moderadas, a miúdo ao longo de fallas.' },
+    { q: 'Cal destas parellas é correcta?', o: ['Lousa: 200–350 °C, presión baixa', 'Lousa: 1000 °C, presión moi alta', 'Peridotita: 30 °C, presión case nula', 'Calcaria: 900 °C a 60 km'], a: 0, e: 'A lousa é de grao baixo: temperatura e presión pequenas, nas primeiras etapas do metamorfismo.' }
+  ];
+  var Q = { i: 0, s: 0, ans: false };
+  function renderQ() {
+    var box = $('#quiz');
+    if (Q.i >= QZ.length) {
+      box.innerHTML = '<p class="gl">Resultado</p><p class="score">' + Q.s + ' / ' + QZ.length + '</p><p>' + (Q.s >= 8 ? 'Moi ben: asocias ben cada rocha coas súas condicións.' : Q.s >= 5 ? 'Vas ben. Repasa o diagrama Tª–P.' : 'Volve á bancada e ao diagrama e proba outra vez.') + '</p><div><button class="btn go" id="qAgain">Repetir</button></div>';
+      $('#qAgain').addEventListener('click', function () { Q = { i: 0, s: 0, ans: false }; renderQ(); }); return;
+    }
+    var q = QZ[Q.i], idx = shuffle(q.o.map(function (_, n) { return n; }));
+    box.innerHTML = '<p class="prog">Pregunta ' + (Q.i + 1) + ' de ' + QZ.length + '</p><p class="q">' + esc(q.q) + '</p><div class="opts">' +
+      idx.map(function (n) { return '<button class="opt" data-n="' + n + '">' + esc(q.o[n]) + '</button>'; }).join('') + '</div><p class="explain" id="qe"></p><div><button class="btn go" id="qn" hidden>Seguinte</button></div>';
+    Q.ans = false;
+  }
+  $('#quiz').addEventListener('click', function (e) {
+    if (e.target.id === 'qn') { Q.i++; renderQ(); return; }
+    var o = e.target.closest('.opt'); if (!o || Q.ans) return; Q.ans = true;
+    var q = QZ[Q.i], n = +o.dataset.n, ok = n === q.a; if (ok) Q.s++;
+    $$('.opt', $('#quiz')).forEach(function (b) { b.disabled = true; if (+b.dataset.n === q.a) b.classList.add('right'); else if (b === o) b.classList.add('wrong'); });
+    $('#qe').textContent = (ok ? 'Correcto. ' : 'Non é esa. ') + q.e;
+    var nb = $('#qn'); nb.hidden = false; nb.textContent = Q.i === QZ.length - 1 ? 'Ver resultado' : 'Seguinte';
+  });
+  renderQ();
+})();
+</script>
+
+</body>
+</html>
